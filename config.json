@@ -1,0 +1,11 @@
+{
+  "dsn": "postgresql://postgres:postgres@localhost:5432",
+  "http_client": {
+    "request_timeout": 5
+  },
+  "log": {
+    "level": "debug",
+    "format": "text"
+  },
+  "bot_key": "7861266541:AAHFfoblnb8hVjGN2Dr6wy0_GAPTjvH1_0M"
+}

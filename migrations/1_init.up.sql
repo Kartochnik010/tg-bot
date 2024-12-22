@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS users (
+	tg_id int NOT NULL PRIMARY KEY,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	
+	firstname VARCHAR(255),
+	lastname VARCHAR(255),
+	username VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS log_request_response (
+    id uuid PRIMARY KEY,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	
+	user_id int NOT NULL REFERENCES users (tg_id),
+	request TEXT NOT NULL,
+	response TEXT NOT NULL
+);
