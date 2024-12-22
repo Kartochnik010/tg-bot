@@ -1,5 +1,5 @@
 {
-  "dsn": "postgresql://postgres:postgres@localhost:5432",
+  "dsn": "postgresql://postgres:postgres@postgres:5432",
   "http_client": {
     "request_timeout": 5
   },

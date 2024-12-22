@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS log_request_response (
     id uuid PRIMARY KEY,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	
-	user_id int NOT NULL REFERENCES users (tg_id),
+	user_id int NOT NULL,
 	request TEXT NOT NULL,
 	response TEXT NOT NULL
 );
