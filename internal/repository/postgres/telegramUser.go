@@ -7,7 +7,6 @@ import (
 	"github.com/Kartochnik010/tg-bot/internal/domain/models"
 	"github.com/Kartochnik010/tg-bot/internal/pkg/logger"
 
-	// "github.com/Kartochnik010/tg-bot/internal/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
