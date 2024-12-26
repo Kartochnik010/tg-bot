@@ -67,9 +67,12 @@ func New(botKey string, service *service.Service, l *logrus.Logger) *Bot {
 	router.addRoute("/start", b.start)
 	router.addRoute("/info", b.info)
 	router.addRoute("/me", b.me)
+
 	router.addRoute("/breeds", b.breeds)
-	router.addRoute("/breed", b.breed)
-	router.addRoute("/random", b.randomPic)
+	router.addRoute("next", b.breeds)
+	
+	// router.addRoute("/breed", b.breed)
+	router.addRoute("/random", b.random)
 
 	b.router = router
 

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/Kartochnik010/tg-bot/internal/pkg/logger"
 )
 
 func NewCatsApiService(client *http.Client) *CatsApiService {
@@ -27,51 +29,30 @@ type CatPicture struct {
 }
 
 type CatApiResponse struct {
-	Weight struct {
-		Imperial string `json:"imperial"`
-		Metric   string `json:"metric"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Temperament  string `json:"temperament"`
+	ID           string `json:"id"`
+	WikipediaURL string `json:"wikipedia_url,omitempty"`
+	Weight       struct {
+		Metric string `json:"metric"`
 	} `json:"weight"`
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	CfaURL           string `json:"cfa_url,omitempty"`
-	VetstreetURL     string `json:"vetstreet_url,omitempty"`
-	VcahospitalsURL  string `json:"vcahospitals_url,omitempty"`
-	Temperament      string `json:"temperament"`
-	Origin           string `json:"origin"`
-	CountryCodes     string `json:"country_codes"`
-	CountryCode      string `json:"country_code"`
-	Description      string `json:"description"`
-	LifeSpan         string `json:"life_span"`
-	Indoor           int    `json:"indoor"`
-	Lap              int    `json:"lap,omitempty"`
-	AltNames         string `json:"alt_names,omitempty"`
-	Adaptability     int    `json:"adaptability"`
-	AffectionLevel   int    `json:"affection_level"`
-	ChildFriendly    int    `json:"child_friendly"`
-	DogFriendly      int    `json:"dog_friendly"`
-	EnergyLevel      int    `json:"energy_level"`
-	Grooming         int    `json:"grooming"`
-	HealthIssues     int    `json:"health_issues"`
-	Intelligence     int    `json:"intelligence"`
-	SheddingLevel    int    `json:"shedding_level"`
-	SocialNeeds      int    `json:"social_needs"`
-	StrangerFriendly int    `json:"stranger_friendly"`
-	Vocalisation     int    `json:"vocalisation"`
-	Experimental     int    `json:"experimental"`
-	Hairless         int    `json:"hairless"`
-	Natural          int    `json:"natural"`
-	Rare             int    `json:"rare"`
-	Rex              int    `json:"rex"`
-	SuppressedTail   int    `json:"suppressed_tail"`
-	ShortLegs        int    `json:"short_legs"`
-	WikipediaURL     string `json:"wikipedia_url,omitempty"`
-	Hypoallergenic   int    `json:"hypoallergenic"`
-	ReferenceImageID string `json:"reference_image_id,omitempty"`
-	CatFriendly      int    `json:"cat_friendly,omitempty"`
-	Bidability       int    `json:"bidability,omitempty"`
+	Origin   string `json:"origin"`
+	LifeSpan string `json:"life_span"`
 }
 
-func (s *CatsApiService) GetRandomCatPicture(ctx context.Context) ([]byte, error) {
+func (c CatApiResponse) String() string {
+	return fmt.Sprintf(`%s
+
+%v
+
+Temperament is %v
+Originated from %v
+Expected life span is %v years
+Learn more about %v at %v
+`, c.Name, c.Description, c.Temperament, c.Origin, c.LifeSpan, c.Name, c.WikipediaURL)
+}
+func (s *CatsApiService) GetRandomCat(ctx context.Context) (*CatPicture, error) {
 	// log := logger.GetLoggerFromCtx(ctx).WithField("op", "UserService.GetRandomCatInfo")
 
 	var cats []CatPicture
@@ -95,29 +76,14 @@ func (s *CatsApiService) GetRandomCatPicture(ctx context.Context) ([]byte, error
 		// log.Error("no cats found")
 		return nil, fmt.Errorf("no cats found")
 	}
-	resp.Body.Close()
 
-	resp, err = s.c.Get(cats[0].URL)
-	if err != nil {
-		// log.WithError(err).Error("failed to fetch music")
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		// log.WithError(err).Error("failed to read body")
-		return nil, err
-	}
-
-	return body, nil
+	return &cats[0], nil
 }
 
-func (s *CatsApiService) GetAllBreeds(ctx context.Context) ([]string, error) {
+func (s *CatsApiService) GetAllBreeds(ctx context.Context) ([]CatApiResponse, error) {
 	// log := logger.GetLoggerFromCtx(ctx).WithField("op", "UserService.GetAllBreeds")
 
 	var cats []CatApiResponse
-	fmt.Println(s.c.Timeout)
 	resp, err := s.c.Get("https://api.thecatapi.com/v1/breeds")
 	if err != nil {
 		// log.WithError(err).Error("failed to fetch breeds")
@@ -135,21 +101,15 @@ func (s *CatsApiService) GetAllBreeds(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	var breeds []string
-	for _, cat := range cats {
-		breeds = append(breeds, cat.Name+" - "+cat.ID)
-	}
-
-	if len(breeds) == 0 {
+	if len(cats) == 0 {
 		// log.Error("no cats found")
 		return nil, fmt.Errorf("no cats found")
-
 	}
-	return breeds, nil
+	return cats, nil
 }
 
 func (s *CatsApiService) GetBreed(ctx context.Context, breed string) (*CatApiResponse, error) {
-	// log := logger.GetLoggerFromCtx(ctx).WithField("op", "UserService.GetAllBreeds")
+	log := logger.GetLoggerFromCtx(ctx).WithField("op", "UserService.GetAllBreeds")
 
 	var cat CatApiResponse
 	resp, err := s.c.Get("https://api.thecatapi.com/v1/breeds/" + breed)
@@ -158,12 +118,15 @@ func (s *CatsApiService) GetBreed(ctx context.Context, breed string) (*CatApiRes
 		return nil, fmt.Errorf("failed to send http: %w", err)
 	}
 	defer resp.Body.Close()
-
+	if resp.StatusCode == 404 {
+		return nil, fmt.Errorf("breed not found")
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		// log.WithError(err).Error("failed to read body")
 		return nil, err
 	}
+	log.Debug("body:", string(body))
 	if string(body) == "INVALID_DATA" {
 		return nil, fmt.Errorf("breed not found")
 	}

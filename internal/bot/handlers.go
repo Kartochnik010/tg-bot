@@ -2,6 +2,8 @@ package tgbot
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/Kartochnik010/tg-bot/internal/domain/models"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -9,18 +11,9 @@ import (
 
 const (
 	infoMessage = `
-	Bot created as a test task. Integration with cats API https://api.thecatapi.com
-	
-	Command list:
-	/start - start bot
-	/info - show this message
-	/me - user info
-	/breeds - all breeds
-	/breed - breed info
-	/random - random cat picture
+	Bot created as a test task. Integration with cats API https://thecatapi.com
 
-	Author: @millionaire_go
-	`
+	Author: @millionaire_go`
 
 	userInfo = `User info:
 	TgID: %d
@@ -43,15 +36,26 @@ func (b *Bot) start(update tgbotapi.Update) error {
 	_, err := b.service.User.SaveUser(b.ctx, user)
 	if err != nil {
 		log.Error(err.Error())
-		return err
 	}
-	fmt.Println("(tgID, update.Message.Text, update.Message.Chat.ID, infoMessage)")
-	fmt.Println(tgID, update.Message.Text, update.Message.Chat.ID, infoMessage)
-	_, err = b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, infoMessage)
+
+	msg := tgbotapi.NewMessage(tgID, infoMessage)
+	msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/breeds"),
+			tgbotapi.NewKeyboardButton("/random"),
+		),
+	)
+	_, err = b.api.Send(msg)
 	if err != nil {
 		log.WithError(err).Error("failed to send message")
 		return err
 	}
+
+	// _, err = b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, infoMessage)
+	// if err != nil {
+	// 	log.WithError(err).Error("failed to send message")
+	// 	return err
+	// }
 	return nil
 }
 
@@ -74,8 +78,10 @@ func (b *Bot) me(update tgbotapi.Update) error {
 	user, err := b.service.User.GetUserByTgID(b.ctx, tgID)
 	if err != nil {
 		log.Error(err.Error())
-		b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, "failed to get user")
-		return err
+		b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, "Curerntly, we do not store your info, but here is what we know:")
+		b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, fmt.Sprintf("User ID: %v\nName: %v\nLastname: %v\nUsername: @%v\n", tgID, update.Message.From.FirstName, update.Message.From.LastName, update.Message.From.UserName))
+
+		return nil
 	}
 	_, err = b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, fmt.Sprintf(userInfo, user.TgID, user.Firstname, user.Lastname, user.Username, user.CreatedAt))
 	if err != nil {
@@ -84,6 +90,8 @@ func (b *Bot) me(update tgbotapi.Update) error {
 	}
 	return nil
 }
+
+var i = 0
 
 func (b *Bot) breeds(update tgbotapi.Update) error {
 	log := b.l.WithField("chat_id", update.Message.Chat.ID)
@@ -95,14 +103,23 @@ func (b *Bot) breeds(update tgbotapi.Update) error {
 		b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, "failed to get breeds")
 		return err
 	}
-	res := "List of all avalable breeds:\n"
-	for _, breed := range breeds {
-		res += breed + "\n"
-	}
-	_, err = b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, res)
+
+	l := len(breeds)
+	msg := tgbotapi.NewMessage(tgID, fmt.Sprintf("%+v", breeds[i]))
+	msg.ReplyMarkup = tgbotapi.NewOneTimeReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("next"),
+		),
+	)
+	_, err = b.api.Send(msg)
 	if err != nil {
 		log.WithError(err).Error("failed to send message")
-		return err
+	}
+
+	if i == l {
+		i = 0
+	} else {
+		i++
 	}
 	return nil
 }
@@ -139,19 +156,32 @@ func (b *Bot) breed(update tgbotapi.Update) error {
 
 }
 
-func (b *Bot) randomPic(update tgbotapi.Update) error {
+func (b *Bot) random(update tgbotapi.Update) error {
 	log := b.l.WithField("chat_id", update.Message.Chat.ID)
 	tgID := update.Message.Chat.ID
 
-	bytes, err := b.service.CatsAPI.GetRandomCatPicture(b.ctx)
+	catPic, err := b.service.CatsAPI.GetRandomCat(b.ctx)
 	if err != nil {
 		log.Error(err.Error())
 		b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, "failed to get breed info")
 		return err
 	}
 
+	resp, err := http.Get(catPic.URL)
+	if err != nil {
+		log.WithError(err).Error("failed to fetch music")
+		return err
+	}
+	defer resp.Body.Close()
+
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("failed to read response body")
+		return err
+	}
+
 	photo := tgbotapi.NewPhoto(update.Message.Chat.ID, tgbotapi.FileBytes{
-		Name:  "cat",
+		Name:  catPic.ID,
 		Bytes: bytes,
 	})
 
