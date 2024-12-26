@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/Kartochnik010/tg-bot/internal/domain/models"
 	"github.com/Kartochnik010/tg-bot/internal/pkg/logger"
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	UNKNOWN_COMMAND = "Sorry, I didn't understand that. Tap /info for more information"
+	UNKNOWN_COMMAND = "Sorry, I didn't understand that. Tap /info for more information" // Sorry, I didn't understand that. Tap /info for more information
 )
 
 type Bot struct {
@@ -22,7 +23,13 @@ type Bot struct {
 	service *service.Service
 	l       *logrus.Logger
 	router  router
-	ctx     context.Context // updated while listening to updates
+
+	breedsCounter struct {
+		m  map[int64]int
+		mu sync.Mutex
+	}
+
+	ctx context.Context // updated while listening to updates
 }
 
 type router struct {
@@ -34,8 +41,9 @@ func NewTgRouter() router {
 }
 
 func (r *router) addRoute(path string, f func(update tgbotapi.Update) error) {
+
+	// for before and after scripts
 	r.routes[path] = func(update tgbotapi.Update) error {
-		fmt.Println("executing route with path", path)
 		return f(update)
 	}
 }
@@ -51,7 +59,7 @@ func New(botKey string, service *service.Service, l *logrus.Logger) *Bot {
 		log.Panic(err)
 	}
 	// botAPI.Debug = true
-	log.Printf("Authorized on account %s", botAPI.Self.UserName)
+	l.Printf("Authorized on account %s", botAPI.Self.UserName)
 
 	updatesConfig := tgbotapi.NewUpdate(0)
 	updatesConfig.Timeout = 60
@@ -61,7 +69,12 @@ func New(botKey string, service *service.Service, l *logrus.Logger) *Bot {
 		api:     botAPI,
 		updates: updates,
 		service: service,
-		l:       l,
+
+		breedsCounter: struct {
+			m  map[int64]int
+			mu sync.Mutex
+		}{m: make(map[int64]int)},
+		l: l,
 	}
 	router := NewTgRouter()
 	router.addRoute("/start", b.start)
@@ -70,7 +83,7 @@ func New(botKey string, service *service.Service, l *logrus.Logger) *Bot {
 
 	router.addRoute("/breeds", b.breeds)
 	router.addRoute("next", b.breeds)
-	
+
 	// router.addRoute("/breed", b.breed)
 	router.addRoute("/random", b.random)
 

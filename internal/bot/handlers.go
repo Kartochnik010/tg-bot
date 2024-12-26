@@ -51,11 +51,6 @@ func (b *Bot) start(update tgbotapi.Update) error {
 		return err
 	}
 
-	// _, err = b.SendString(tgID, update.Message.Text, update.Message.Chat.ID, infoMessage)
-	// if err != nil {
-	// 	log.WithError(err).Error("failed to send message")
-	// 	return err
-	// }
 	return nil
 }
 
@@ -91,8 +86,6 @@ func (b *Bot) me(update tgbotapi.Update) error {
 	return nil
 }
 
-var i = 0
-
 func (b *Bot) breeds(update tgbotapi.Update) error {
 	log := b.l.WithField("chat_id", update.Message.Chat.ID)
 	tgID := update.Message.Chat.ID
@@ -105,6 +98,12 @@ func (b *Bot) breeds(update tgbotapi.Update) error {
 	}
 
 	l := len(breeds)
+
+	b.breedsCounter.mu.Lock()
+	i := b.breedsCounter.m[tgID] % l
+	b.breedsCounter.m[tgID]++
+	b.breedsCounter.mu.Unlock()
+
 	msg := tgbotapi.NewMessage(tgID, fmt.Sprintf("%+v", breeds[i]))
 	msg.ReplyMarkup = tgbotapi.NewOneTimeReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
@@ -116,11 +115,6 @@ func (b *Bot) breeds(update tgbotapi.Update) error {
 		log.WithError(err).Error("failed to send message")
 	}
 
-	if i == l {
-		i = 0
-	} else {
-		i++
-	}
 	return nil
 }
 
@@ -185,7 +179,7 @@ func (b *Bot) random(update tgbotapi.Update) error {
 		Bytes: bytes,
 	})
 
-	_, err = b.Send(tgID, "random cat picture", photo)
+	_, err = b.Send(tgID, "some cat", photo)
 	if err != nil {
 		log.WithError(err).Error("failed to send message")
 		return err
