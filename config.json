@@ -5,7 +5,7 @@
   },
   "log": {
     "level": "debug",
-    "format": "text"
+    "format": "json"
   },
   "bot_key": "7861266541:AAHFfoblnb8hVjGN2Dr6wy0_GAPTjvH1_0M"
 }
