@@ -9,18 +9,12 @@ import (
 // read mssql connection string from config.json
 
 type Config struct {
-	Port int    `json:"port"`
-	DSN  string `json:"dsn"`
-
-	Limiter struct {
-		Rps     float64 `json:"rps"`
-		Burst   int     `json:"burst"`
-		Enabled bool    `json:"enabled"`
-	} `json:"limiter"`
+	DSN string `json:"dsn"`
 
 	HTTPClient struct {
 		RequestTimeout time.Duration `json:"request_timeout"`
 	} `json:"http_client"`
+
 	Log struct {
 		Level  string `json:"level"`
 		Format string `json:"format"`

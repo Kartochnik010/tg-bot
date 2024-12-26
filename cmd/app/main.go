@@ -46,7 +46,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.WithField("port", cfg.Port).Info("starting app")
 	if err := app.Run(); err != nil && err != http.ErrServerClosed {
 		log.WithError(err).Error("failed to run app")
 		os.Exit(1)
