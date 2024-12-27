@@ -17,7 +17,8 @@ func NewCatsApiService(client *http.Client) *CatsApiService {
 }
 
 type CatsApiService struct {
-	c *http.Client
+	c     *http.Client
+	cache []CatApiResponse
 }
 
 type CatPicture struct {
@@ -82,7 +83,9 @@ func (s *CatsApiService) GetRandomCat(ctx context.Context) (*CatPicture, error) 
 
 func (s *CatsApiService) GetAllBreeds(ctx context.Context) ([]CatApiResponse, error) {
 	// log := logger.GetLoggerFromCtx(ctx).WithField("op", "UserService.GetAllBreeds")
-
+	if len(s.cache) != 0 {
+		return s.cache, nil
+	}
 	var cats []CatApiResponse
 	resp, err := s.c.Get("https://api.thecatapi.com/v1/breeds")
 	if err != nil {
@@ -105,6 +108,9 @@ func (s *CatsApiService) GetAllBreeds(ctx context.Context) ([]CatApiResponse, er
 		// log.Error("no cats found")
 		return nil, fmt.Errorf("no cats found")
 	}
+
+	s.cache = cats
+
 	return cats, nil
 }
 
