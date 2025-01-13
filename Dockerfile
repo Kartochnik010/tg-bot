@@ -1,12 +1,12 @@
 # Build stage
-FROM golang:1.22.2 AS build
+FROM golang:1.22.10 AS build
 
 # Set the working directory inside the container
 WORKDIR /app
 
 # Copy the Go modules and source files
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod t
 
 COPY . .
 
